@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4
+
+- package.json: `author`, `publishConfig` with `provenance: true`
+- README: CI + npm downloads badges
+- ci: publish workflow now has the npm token secret it requires
+
+
 All notable changes to `relabeld`. Built in versioned milestones.
 
 ## 1.0.3 — docs accuracy

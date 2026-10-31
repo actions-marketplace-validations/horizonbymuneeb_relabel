@@ -1,6 +1,8 @@
 # relabeld
 
+ [![CI](https://github.com/horizonbymuneeb/relabel/actions/workflows/ci.yml/badge.svg)](https://github.com/horizonbymuneeb/relabel/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/relabeld?color=2563EB)](https://www.npmjs.com/package/relabeld)
+[![downloads](https://img.shields.io/npm/dm/relabeld?color=2563EB)](https://www.npmjs.com/package/relabeld)
 [![license](https://img.shields.io/badge/license-MIT-2563EB)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D20-2563EB)](package.json)
 [![docker](https://img.shields.io/badge/docker-Dockerfile-2563EB)](Dockerfile)
