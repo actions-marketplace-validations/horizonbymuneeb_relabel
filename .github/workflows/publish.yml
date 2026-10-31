@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish, e.g. v1.1.0"
+        required: true
+        type: string
 
 permissions:
   contents: write # create the GitHub Release on the tag
@@ -16,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -25,10 +32,11 @@ jobs:
           cache: npm
 
       - name: Guard version matches tag
-        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${TAG#v}"
           pkg="$(node -p "require('./package.json').version")"
           if [ "$tag" != "$pkg" ]; then
             echo "::error::tag v$tag does not match package.json version $pkg"
@@ -46,14 +54,22 @@ jobs:
         run: npm test
 
       - name: Publish
-        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          # npm has no skip-existing: a re-run must not burn the job on E403.
+          if npm view "relabeld@${version}" version >/dev/null 2>&1; then
+            echo "relabeld@${version} is already on npm — nothing to publish"
+          else
+            npm publish --access public --provenance
+          fi
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --generate-notes
+          set -euo pipefail
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --generate-notes
