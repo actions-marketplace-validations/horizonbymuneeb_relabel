@@ -646,7 +646,7 @@ function actionDoc(): any {
 
 test("action.yml: version pinned to 1.0.0 and fail-on documents screenshot(s)", () => {
   const doc = actionDoc();
-  assert.equal(doc.inputs.version.default, "1.0.0");
+  assert.equal(doc.inputs.version.default, "1.1.0");
   assert.doesNotMatch(doc.inputs.version.default, /latest/);
   assert.match(doc.inputs["fail-on"].description, /screenshot/i);
 });

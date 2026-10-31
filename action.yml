@@ -15,9 +15,13 @@ inputs:
     required: false
     default: "brand.yaml"
   version:
-    description: "Pinned relabeld npm version to run (default: 1.0.0). Bump deliberately; do not track latest in a release gate."
+    description: "Pinned relabeld npm version to run (default: 1.1.0). Bump deliberately; do not track latest in a release gate."
     required: false
-    default: "1.0.0"
+    default: "1.1.0"
+  shots:
+    description: "Directory for the verification screenshots (uploaded with the proof)."
+    required: false
+    default: ".relabel/verify"
   cdp:
     description: "Optional Chrome DevTools Protocol endpoint to reuse instead of launching Chromium."
     required: false
@@ -52,13 +56,14 @@ runs:
         INPUT_BRAND: ${{ inputs.brand }}
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_CDP: ${{ inputs.cdp }}
+        INPUT_SHOTS: ${{ inputs.shots }}
       run: |
         set -uo pipefail
 
         json_path="${RUNNER_TEMP:-/tmp}/relabel-verify.json"
         echo "json_path=$json_path" >> "$GITHUB_OUTPUT"
 
-        args=(verify --url "$INPUT_URL" --brand "$INPUT_BRAND" --json --out "$json_path")
+        args=(verify --url "$INPUT_URL" --brand "$INPUT_BRAND" --json --out "$json_path" --shots "$INPUT_SHOTS")
         if [ -n "${INPUT_CDP:-}" ]; then
           args+=(--cdp "$INPUT_CDP")
         fi
@@ -136,6 +141,46 @@ runs:
         process.exit(1);
         NODE
 
+    - name: Job summary
+      if: always()
+      shell: bash
+      env:
+        VERIFY_JSON: ${{ steps.verify.outputs.json_path }}
+      run: |
+        set -uo pipefail
+        [ -s "${VERIFY_JSON:-}" ] || exit 0
+        node - "$VERIFY_JSON" <<'NODE'
+        const fs = require("node:fs");
+        const file = process.argv[2];
+        let result;
+        try {
+          result = JSON.parse(fs.readFileSync(file, "utf8"));
+        } catch {
+          process.exit(0);
+        }
+        const checks = Array.isArray(result.checks) ? result.checks : [];
+        const failed = checks.filter((check) => check.status === "fail");
+        const skipped = checks.filter((check) => check.status === "skip");
+        const summary = result.summary ?? {};
+        const lines = [];
+        lines.push(`## relabeld ${failed.length === 0 ? "✅ verified" : "❌ failed"} — ${result.brandName ?? "brand"}`);
+        lines.push("");
+        lines.push(`- page: ${result.url ?? "?"}`);
+        lines.push(`- checks: **${summary.passed ?? checks.length - failed.length - skipped.length} passed**, ${summary.failed ?? failed.length} failed, ${summary.skipped ?? skipped.length} skipped`);
+        if (failed.length > 0) {
+          lines.push("");
+          lines.push("| failed check | detail |");
+          lines.push("|---|---|");
+          for (const check of failed.slice(0, 20)) {
+            const detail = String(check.detail ?? check.message ?? "").replace(/\|/g, "\\|").slice(0, 180);
+            lines.push(`| ${check.id ?? "check"} | ${detail} |`);
+          }
+        }
+        const text = lines.join("\n") + "\n";
+        console.log(text);
+        if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
+        NODE
+
     - name: Build HTML report
       if: always() && inputs.report != ''
       shell: bash
@@ -151,11 +196,14 @@ runs:
         fi
         npx -y "relabeld@${INPUT_VERSION}" report --input "$VERIFY_JSON" --out "$INPUT_REPORT" --json
 
-    - name: Upload report
-      if: always() && inputs.report != ''
+    - name: Upload proof and screenshots
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: relabel-report
-        path: ${{ inputs.report }}
+        name: relabel-evidence
+        path: |
+          ${{ inputs.report }}
+          ${{ inputs.shots }}
+          .relabel/verify.json
         if-no-files-found: warn
         retention-days: 14

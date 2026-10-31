@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+### Added
+- **Action: job summary and screenshot evidence.** The composite action now writes a
+  Markdown summary (pass/fail counts, failed checks with detail) to the job, uploads
+  the screenshots together with the JSON proof as `relabel-evidence`, and gained a
+  `shots` input.
+- **`docs/cookbook.md`** — seven worked flows: a full rebrand, the CI gate, a dev
+  loop, adding a recipe, two-brand builds, a failure-to-fix table and rollback.
+- Action version pin moved to `1.1.0`.
+
+
 ## 1.0.4
 
 - package.json: `author`, `publishConfig` with `provenance: true`

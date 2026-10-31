@@ -119,6 +119,22 @@ relabeld report --input verify.json --out report.html
 skipped check, such as an unconfigured favicon, does not fail the gate); see [Verification](#verification). The full walkthrough, including the compose
 override and CI wiring, is in [docs/quickstart.md](docs/quickstart.md).
 
+## In CI with the Action
+
+```yaml
+- uses: horizonbymuneeb/relabel@v1.1.0
+  with:
+    url: http://localhost:3001
+    brand: brand.yaml
+    report: relabel-report.html
+    fail-on: brand,console,overflow
+```
+
+Runs `verify`, applies the `fail-on` policy, posts the failed checks to the job
+summary, and uploads the screenshots plus the JSON proof as `relabel-evidence`.
+[Marketplace listing](https://github.com/marketplace/actions/relabel-verify) ·
+Seven worked flows in [docs/cookbook.md](docs/cookbook.md).
+
 ## Commands
 
 | Command | Flags | What it does |
